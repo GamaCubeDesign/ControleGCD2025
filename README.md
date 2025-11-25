@@ -6,3 +6,15 @@
 - `src`: pasta que possui toda a lógica de implementação das missões;
 - `keywords.txt`: destaque das palavras chaves reservadas da biblioteca;
 - `library.properties`: propriedades da biblioteca.
+## Script
+Para facilitar o processo de atualização da biblioteca, foi criado um script em Python
+
+### Windows
+```powershell
+python zip_arduino_lib.py
+```
+
+### Linux
+```bash
+python3 zip_arduino_lib.py
+```
