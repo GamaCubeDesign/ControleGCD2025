@@ -1,2 +1,8 @@
 # ControleGCD2025
-Repositório destinado à biblioteca arduino de controle.
+## Estrutura
+- `examples/`: pasta que possui os arquivos principais:
+  - `./examples/CubesatMain/CubesatMain.in:`: interface de comunicação com TT&C;
+  - `./examples/CubesatWebServer/CubesatWebServer.ino`: interface de comunicação via Web.
+- `src`: pasta que possui toda a lógica de implementação das missões;
+- `keywords.txt`: destaque das palavras chaves reservadas da biblioteca;
+- `library.properties`: propriedades da biblioteca.
