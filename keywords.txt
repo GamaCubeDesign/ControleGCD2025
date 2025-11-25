@@ -1,0 +1,22 @@
+#######################################
+# Datatypes (classes, enums, structs)
+#######################################
+
+MissionType	KEYWORD1
+
+#######################################
+# Functions (API pública)
+#######################################
+
+missionControllerBegin	KEYWORD2
+missionControllerSetMission	KEYWORD2
+missionControllerUpdate	KEYWORD2
+
+#######################################
+# Namespaces das missoes
+#######################################
+
+Stability	KEYWORD1
+SunPointing	KEYWORD1
+SolarVector	KEYWORD1
+TwoVectors	KEYWORD1
