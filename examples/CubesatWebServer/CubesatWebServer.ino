@@ -263,7 +263,7 @@ void handleRunCode1() {
     // Aqui você pode escolher qual missão está ligada ao "vetor solar":
     // - SunPointing, se ela já calcula o vetor + controle
     // - SolarVector, se for uma missão separada
-    currentMission = MissionType::SunPointing;
+    currentMission = MissionType::SolarVector;
     missionControllerSetMission(currentMission);
 
     Serial.println(F("[WiFi] Código 1 INICIADO - Missão SunPointing ativa"));
@@ -332,7 +332,7 @@ void setup() {
   missionControllerBegin();
 
   // Missão inicial (se quiser, pode ser None)
-  currentMission = MissionType::Stability;
+  // currentMission = MissionType::Stability;
   missionControllerSetMission(currentMission);
 
   Serial.print(F("[MAIN] Missão inicial: "));
