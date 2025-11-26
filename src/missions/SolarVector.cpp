@@ -82,8 +82,8 @@ void update() {
   angulo_est = calcularVetorSolar();
 
   // Debug opcional
-  // Serial.print(F("[SolarVector] Angulo estimado: "));
-  // Serial.println(angulo_est);
+  Serial.print(F("[SolarVector] Angulo estimado: "));
+  Serial.println(angulo_est);
 }
 
 float getEstimatedAngle() { return angulo_est; }

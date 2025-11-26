@@ -82,8 +82,8 @@ static bool gyroCalibrated = false;
 
 // Calibração do gyro Z
 static void calibrateGyroZ() {
-  // Serial.println(
-  //     F("[Stability] Calibrando gyro Z, mantenha o satelite PARADO..."));
+  Serial.println(
+      F("[Stability] Calibrando gyro Z, mantenha o satelite PARADO..."));
   delay(500);
 
   float sum = 0.0f;
@@ -94,9 +94,9 @@ static void calibrateGyroZ() {
   }
   gyroOffsetZ = sum / (float)GYRO_CALIB_SAMPLES;
 
-  // Serial.print(F("[Stability] Offset gyro Z = "));
-  // Serial.print(gyroOffsetZ, 6);
-  // Serial.println(F(" rad/s"));
+  Serial.print(F("[Stability] Offset gyro Z = "));
+  Serial.print(gyroOffsetZ, 6);
+  Serial.println(F(" rad/s"));
 }
 
 // Leitura do gyro Z com filtro exponencial
@@ -188,24 +188,24 @@ void begin() {
     // Driver
     driver.voltage_power_supply = VOLTAGE_SUPPLY;
     driver.voltage_limit = VOLTAGE_LIMIT;
-    // if (!driver.init()) {
-    //   Serial.println(F("[Stability] ERRO: driver.init() falhou!"));
-    //   while (1) {
-    //     // trava aqui para debug (você pode trocar por outro tratamento)
-    //   }
-    // }
+    if (!driver.init()) {
+      Serial.println(F("[Stability] ERRO: driver.init() falhou!"));
+      while (1) {
+        // trava aqui para debug (você pode trocar por outro tratamento)
+      }
+    }
     motor.linkDriver(&driver);
 
     // Motor em open loop de velocidade
     motor.voltage_limit = VOLTAGE_LIMIT;
     motor.controller = MotionControlType::velocity_openloop;
 
-    // if (!motor.init()) {
-    //   Serial.println(F("[Stability] ERRO: motor.init() falhou!"));
-    //   while (1) {
-    //     // trava aqui para debug
-    //   }
-    // }
+    if (!motor.init()) {
+      Serial.println(F("[Stability] ERRO: motor.init() falhou!"));
+      while (1) {
+        // trava aqui para debug
+      }
+    }
 
     hardwareInitialized = true;
   }
@@ -222,7 +222,7 @@ void begin() {
   lastDirection = 0;
   satRateFiltered = 0.0f;
 
-  // Serial.println(F("[Stability] begin() concluido"));
+  Serial.println(F("[Stability] begin() concluido"));
 }
 
 void update() {

@@ -3,15 +3,21 @@
 #include <WebServer.h>
 
 #include "MissionController.h"
-#include "missions/SunPointing.h"
+#include "missions/SunPointing.h"   // para getEstimatedAngle()
 #include "missions/SolarVector.h"
 #include "missions/Stability.h"
 #include "missions/TwoVectors.h"
+// Opcional: se você quiser que o Código 2 realmente configure
+// um ângulo alvo em alguma missão (TwoVectors, por exemplo),
+// pode incluir o header correspondente e criar um setTargetAngleDeg() lá.
+// #include "missions/TwoVectors.h"
 
 WebServer server(80);
 
 // ====================== CONFIG WI-FI (ALTERAR AQUI) ======================
 // Deixa tudo concentrado num lugar só para ser fácil de preencher.
+// Depois, se quiser algo 100% dinâmico, dá para ler SSID/senha via Serial
+// e salvar em NVS/SPIFFS.
 
 const char* WIFI_SSID     = "SEU_SSID_AQUI";
 const char* WIFI_PASSWORD = "SUA_SENHA_AQUI";
@@ -20,7 +26,7 @@ const char* WIFI_PASSWORD = "SUA_SENHA_AQUI";
 
 static MissionType currentMission = MissionType::None;
 
-// Esse bool liga/desliga o "Código 1" (vetor solar / SolarVector)
+// Esse bool liga/desliga o "Código 1" (vetor solar)
 bool code1Running = false;
 
 // Último ângulo solar enviado para a interface
@@ -31,58 +37,50 @@ float targetAngleDeg = 0.0f;
 
 // ====================== FUNÇÕES AUXILIARES ======================
 
-// Reset de software da ESP32
-static void cubesatSoftReset() {
-  // Serial.println(F("[SYSTEM] Reset de software solicitado via HTTP..."));
-  // Serial.flush();
-  delay(200);
-  ESP.restart();
-}
-
 static void printMissionName(MissionType mission) {
   switch (mission) {
     case MissionType::Stability:
-      // Serial.print(F("Stability (1)"));
+      Serial.print(F("Stability (1)"));
       break;
     case MissionType::SunPointing:
-      // Serial.print(F("SunPointing (3)"));
+      Serial.print(F("SunPointing (2/3)"));
       break;
     case MissionType::SolarVector:
-      // Serial.print(F("SolarVector (1)"));
+      Serial.print(F("SolarVector (1)"));
       break;
     case MissionType::TwoVectors:
-      // Serial.print(F("TwoVectors (2)"));
+      Serial.print(F("TwoVectors (2)"));
       break;
     case MissionType::None:
     default:
-      // Serial.print(F("None (0)"));
+      Serial.print(F("None (0)"));
       break;
   }
 }
 
 static void connectWiFi() {
-  // Serial.println();
-  // Serial.print(F("[WiFi] Conectando em SSID: "));
-  // Serial.println(WIFI_SSID);
+  Serial.println();
+  Serial.print(F("[WiFi] Conectando em SSID: "));
+  Serial.println(WIFI_SSID);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    // Serial.print(".");
+    Serial.print(".");
   }
 
-  // Serial.println();
-  // Serial.println(F("[WiFi] Conectado!"));
-  // Serial.print(F("[WiFi] IP: "));
-  // Serial.println(WiFi.localIP());
+  Serial.println();
+  Serial.println(F("[WiFi] Conectado!"));
+  Serial.print(F("[WiFi] IP: "));
+  Serial.println(WiFi.localIP());
 }
 
 // ====================== HANDLERS HTTP ======================
 
 void handleRoot() {
-  // Página baseada na que você mandou, com botão extra de reset
+  // Página baseada na que você mandou, só limpei o texto pra ficar mais genérico.
   String html = R"rawliteral(
   <!DOCTYPE html>
   <html>
@@ -125,7 +123,7 @@ void handleRoot() {
     <p>ESP32 conectado via Wi-Fi</p>
 
     <div class="input-group">
-      <h3>Vetor Solar (medição) <span id="status1" class="status inativo">PARADO</span></h3>
+      <h3>Vetor/Sun Vector <span id="status1" class="status inativo">PARADO</span></h3>
       <button onclick="toggleCode1()" id="btnCode1">Iniciar Código 1</button>
     </div>
 
@@ -134,24 +132,19 @@ void handleRoot() {
     </div>
 
     <div class="input-group">
-      <h3>Ângulos quaisquer (TwoVectors)</h3>
-      <input type="number" id="inteiroInput" value="0" min="0" max="259">
+      <h3>Ângulos quaisquer</h3>
+      <input type="number" id="inteiroInput" value="0" min="0" max="1000">
       <button onclick="runCode(2)">Executar Código 2</button>
     </div>
 
     <div class="input-group">
-      <h3>Sun Pointing (controle ativo)</h3>
+      <h3>Sun Pointing</h3>
       <button onclick="runCode(3)">Executar Código 3</button>
     </div>
 
     <div class="input-group">
-      <h3>Estabilização a 60RPM (Stability)</h3>
+      <h3>Estabilização a 60RPM</h3>
       <button onclick="runCode(4)">Executar Código 4</button>
-    </div>
-
-    <div class="input-group">
-      <h3>Reset ESP32</h3>
-      <button onclick="runReset()">Reiniciar ESP32</button>
     </div>
 
     <div id="resposta">
@@ -232,7 +225,7 @@ void handleRoot() {
           url += '?valor=' + valor;
         }
 
-        respostaDiv.innerHTML = 'Executando Código ' + code + '...';
+        respostaDiv.innerHTML = '🔄 Executando Código ' + code + '...';
 
         fetch(url)
           .then(response => response.text())
@@ -241,20 +234,6 @@ void handleRoot() {
           })
           .catch(error => {
             respostaDiv.innerHTML = 'Erro: ' + error;
-          });
-      }
-
-      function runReset() {
-        const respostaDiv = document.getElementById('resposta');
-        respostaDiv.innerHTML = 'Reiniciando ESP32...';
-
-        fetch('/reset')
-          .then(response => response.text())
-          .then(data => {
-            respostaDiv.innerHTML = data + '<br>Se a conexão cair, reconecte na nova sessão Wi-Fi.';
-          })
-          .catch(error => {
-            respostaDiv.innerHTML = 'Erro ao enviar comando de reset: ' + error;
           });
       }
 
@@ -268,49 +247,51 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-// Retorna o ângulo atual do SolarVector (apenas medição)
+// Retorna o ângulo atual do SunPointing
 void handleGetAngle() {
-  float ang = SolarVector::getEstimatedAngle();  // graus [0, 360)
+  // Lê o último ângulo estimado pela missão SunPointing
+  float ang = SolarVector::getEstimatedAngle();
   ultimoAngulo = ang;
   server.send(200, "text/plain", String(ang, 2));
 }
 
-// Código 1 - alterna ligar/desligar SolarVector (medição do vetor solar)
+// Código 1 - alterna ligar/desligar SunPointing/SolarVector
 void handleRunCode1() {
   code1Running = !code1Running;
 
   if (code1Running) {
-    currentMission = MissionType::SolarVector;
+    // Aqui você pode escolher qual missão está ligada ao "vetor solar":
+    // - SunPointing, se ela já calcula o vetor + controle
+    // - SolarVector, se for uma missão separada
+    currentMission = MissionType::SunPointing;
     missionControllerSetMission(currentMission);
 
-    // Serial.println(F("[WiFi] Código 1 INICIADO - Missão SolarVector ativa"));
-    server.send(200, "text/plain", "Código 1 INICIADO - Missão SolarVector ativa");
+    Serial.println(F("[WiFi] Código 1 INICIADO - Missão SunPointing ativa"));
+    server.send(200, "text/plain", "Código 1 INICIADO - Missão SunPointing ativa");
   } else {
+    // Quando parar, você pode voltar para None ou para alguma missão default
     currentMission = MissionType::None;
     missionControllerSetMission(currentMission);
 
-    // Serial.println(F("[WiFi] Código 1 PARADO - Missão None"));
+    Serial.println(F("[WiFi] Código 1 PARADO - Missão None"));
     server.send(200, "text/plain", "Código 1 PARADO - Missão None");
   }
 }
 
-// Código 2 - recebe um inteiro via interface (ex: ângulo alvo em graus)
+// Código 2 - recebe um inteiro via interface (ex: ângulo alvo)
 void handleRunCode2() {
   if (server.hasArg("valor")) {
     float valorRecebido = server.arg("valor").toFloat();
 
-    // 1) Garante que a missão TwoVectors está ativa
-    if (currentMission != MissionType::TwoVectors) {
-      currentMission = MissionType::TwoVectors;
-      missionControllerSetMission(currentMission);
-      // Serial.println(F("[WiFi] Código 2 - Missão TwoVectors ativada"));
-    }
-
-    // 2) Depois de a missão estar ativa, define o setpoint
+    // Define o alvo em graus na missão TwoVectors
     TwoVectors::setTargetAngleDeg(valorRecebido);
 
-    // Serial.print(F("[WiFi] Código 2 executado - Novo setpoint (deg): "));
-    // Serial.println(valorRecebido);
+    // Garante que a missão TwoVectors está ativa
+    currentMission = MissionType::TwoVectors;
+    missionControllerSetMission(currentMission);
+
+    Serial.print(F("[WiFi] Código 2 executado - Novo setpoint (deg): "));
+    Serial.println(valorRecebido);
 
     server.send(200, "text/plain",
                 "Código 2 executado - Apontamento alvo (deg): " +
@@ -325,7 +306,7 @@ void handleRunCode3() {
   currentMission = MissionType::SunPointing;
   missionControllerSetMission(currentMission);
 
-  // Serial.println(F("[WiFi] Código 3 executado - Missão SunPointing"));
+  Serial.println(F("[WiFi] Código 3 executado - Missão SunPointing"));
   server.send(200, "text/plain", "Código 3 executado - Missão SunPointing ativada");
 }
 
@@ -334,20 +315,8 @@ void handleRunCode4() {
   currentMission = MissionType::Stability;
   missionControllerSetMission(currentMission);
 
-  // Serial.println(F("[WiFi] Código 4 executado - Missão Stability"));
+  Serial.println(F("[WiFi] Código 4 executado - Missão Stability"));
   server.send(200, "text/plain", "Código 4 executado - Missão Stability ativada");
-}
-
-// Código 5 - Reset da ESP32
-void handleReset() {
-  server.send(200, "text/plain", "ESP32 reiniciando...");
-
-  // Serial.println(F("[WiFi] Reset solicitado via /reset"));
-  // Serial.flush();
-
-  delay(500);  // tempo pro cliente receber a resposta
-
-  cubesatSoftReset();
 }
 
 // ====================== SETUP & LOOP ======================
@@ -356,19 +325,19 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Serial.println();
-  // Serial.println(F("=== CubeSat WiFi WebServer Mission Control ==="));
+  Serial.println();
+  Serial.println(F("=== CubeSat WiFi WebServer Mission Control ==="));
 
   // Inicializa controlador de missões
   missionControllerBegin();
 
   // Missão inicial (se quiser, pode ser None)
-  // currentMission = MissionType::Stability;
+  currentMission = MissionType::Stability;
   missionControllerSetMission(currentMission);
 
-  // Serial.print(F("[MAIN] Missão inicial: "));
+  Serial.print(F("[MAIN] Missão inicial: "));
   printMissionName(currentMission);
-  // Serial.println();
+  Serial.println();
 
   // Conecta ao Wi-Fi
   connectWiFi();
@@ -380,10 +349,9 @@ void setup() {
   server.on("/run3", handleRunCode3);
   server.on("/run4", handleRunCode4);
   server.on("/getAngle", handleGetAngle);
-  server.on("/reset", handleReset);
 
   server.begin();
-  // Serial.println(F("[WiFi] Servidor HTTP iniciado na porta 80"));
+  Serial.println(F("[WiFi] Servidor HTTP iniciado na porta 80"));
 }
 
 void loop() {

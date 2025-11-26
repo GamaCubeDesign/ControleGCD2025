@@ -190,12 +190,12 @@ void begin() {
     // Driver e BLDC
     driver.voltage_power_supply = SUPPLY_VOLTAGE;
     driver.voltage_limit = MOTOR_VOLTAGE_LIMIT;
-    // if (!driver.init()) {
-    //   Serial.println(F("[SunPointing] ERRO: driver L6234 nao inicializou!"));
-    //   while (1) {
-    //     delay(1000);
-    //   }
-    // }
+    if (!driver.init()) {
+      Serial.println(F("[SunPointing] ERRO: driver L6234 nao inicializou!"));
+      while (1) {
+        delay(1000);
+      }
+    }
     motor.linkDriver(&driver);
 
     // Configura motor para controle de VELOCIDADE
@@ -211,18 +211,18 @@ void begin() {
 
     motor.LPF_velocity.Tf = 0.01f; // filtro passa-baixa para medição de vel.
 
-    // if (!motor.init()) {
-    //   Serial.println(F("[SunPointing] ERRO: motor nao inicializou!"));
-    //   while (1) {
-    //     delay(1000);
-    //   }
-    // }
+    if (!motor.init()) {
+      Serial.println(F("[SunPointing] ERRO: motor nao inicializou!"));
+      while (1) {
+        delay(1000);
+      }
+    }
 
     // Inicializa FOC (alinhamento do sensor + calibração)
     motor.initFOC();
 
     hardwareInitialized = true;
-    // Serial.println(F("[SunPointing] Hardware inicializado"));
+    Serial.println(F("[SunPointing] Hardware inicializado"));
   }
 
   // Estado inicial de controle
@@ -232,7 +232,7 @@ void begin() {
   lastSunAngleRad = 0.0f;
   lastGyroZRad_s = 0.0f;
 
-  // Serial.println(F("[SunPointing] begin() concluido. Sistema pronto."));
+  Serial.println(F("[SunPointing] begin() concluido. Sistema pronto."));
 }
 
 void update() {

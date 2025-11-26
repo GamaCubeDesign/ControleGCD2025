@@ -176,8 +176,8 @@ static void calibrarGyroZ() {
   const int N = 500;
   float soma = 0.0f;
 
-  // Serial.println(
-  //     F("[TwoVectors] Calibrando gyro Z, mantenha o satelite parado..."));
+  Serial.println(
+      F("[TwoVectors] Calibrando gyro Z, mantenha o satelite parado..."));
 
   for (int i = 0; i < N; i++) {
     if (imu.gyroUpdate() == 0) {
@@ -188,8 +188,8 @@ static void calibrarGyroZ() {
 
   gyroZBiasDeg_s = soma / (float)N;
 
-  // Serial.print(F("[TwoVectors] Bias gyroZ (deg/s): "));
-  // Serial.println(gyroZBiasDeg_s, 6);
+  Serial.print(F("[TwoVectors] Bias gyroZ (deg/s): "));
+  Serial.println(gyroZBiasDeg_s, 6);
 }
 
 // ====================== API PÚBLICA ======================
@@ -219,12 +219,12 @@ void begin() {
     // Driver BLDC
     driver.voltage_power_supply = SUPPLY_VOLTAGE;
     driver.voltage_limit = MOTOR_VOLTAGE_LIMIT;
-    // if (!driver.init()) {
-    //   Serial.println(F("[TwoVectors] ERRO: driver.init() falhou!"));
-    //   while (1) {
-    //     delay(1000);
-    //   }
-    // }
+    if (!driver.init()) {
+      Serial.println(F("[TwoVectors] ERRO: driver.init() falhou!"));
+      while (1) {
+        delay(1000);
+      }
+    }
     motor.linkDriver(&driver);
 
     // Motor em controle de velocidade FOC
@@ -239,34 +239,29 @@ void begin() {
 
     motor.LPF_velocity.Tf = 0.03f;
 
-    // if (!motor.init()) {
-    //   Serial.println(F("[TwoVectors] ERRO: motor.init() falhou!"));
-    //   while (1) {
-    //     delay(1000);
-    //   }
-    // }
+    if (!motor.init()) {
+      Serial.println(F("[TwoVectors] ERRO: motor.init() falhou!"));
+      while (1) {
+        delay(1000);
+      }
+    }
 
     // FOC
     motor.initFOC();
 
-    // Estado inicial (somente NA PRIMEIRA VEZ)
-    lastRampTime = millis();
-    lastAttUpdateMicros = micros();
-    hasSetpoint = false;
-    targetAngleDeg = 0.0f;
-    targetAngleRad = 0.0f;
-
     hardwareInitialized = true;
-    // Serial.println(F("[TwoVectors] Hardware inicializado"));
-  } else {
-    // Chamadas futuras de begin(): só ressincronizamos o tempo de rampa
-    lastRampTime = millis();
-    lastAttUpdateMicros = micros();
-
-    // Serial.println(F("[TwoVectors] begin() chamado (hardware já inicializado,
-    // "
-    //                  "setpoint preservado)."));
+    Serial.println(F("[TwoVectors] Hardware inicializado"));
   }
+
+  lastRampTime = millis();
+  lastAttUpdateMicros = micros();
+
+  // Por padrão, começamos sem setpoint (esperando comando externo)
+  hasSetpoint = false;
+  targetAngleDeg = 0.0f;
+  targetAngleRad = 0.0f;
+
+  Serial.println(F("[TwoVectors] begin() concluido, aguardando setpoint..."));
 }
 
 void update() {
@@ -320,8 +315,8 @@ void setTargetAngleDeg(float angleDeg) {
   targetAngleRad = targetAngleDeg * PI / 180.0f;
   hasSetpoint = true;
 
-  // Serial.print(F("[TwoVectors] Novo setpoint (deg): "));
-  // Serial.println(targetAngleDeg);
+  Serial.print(F("[TwoVectors] Novo setpoint (deg): "));
+  Serial.println(targetAngleDeg);
 }
 
 void clearSetpoint() {
